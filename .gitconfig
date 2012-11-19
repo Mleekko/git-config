@@ -1,0 +1,160 @@
+[user]
+    name = Mleekko
+    email = mleekko@gmail.com
+
+[color]
+    diff = auto
+    status = auto
+    branch = auto
+
+[alias]
+    # std one line log
+    log1 = log --pretty=oneline --abbrev-commit --decorate --graph
+    # more fancy
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+
+    # shorter checkout
+    co = checkout
+    
+    # shorter status
+    st = status
+    
+    # shorter fetch upstream
+    fup = fetch upstream
+        
+    # shorter fetch origin
+    for = fetch origin
+    
+    # shorter fetch --all
+    fall = fetch --all
+    
+    # shorter branch -a
+    bra = branch -a
+
+    # shorter branch
+    br = branch
+    
+    # shorter remote add upstream
+    rap = remote add upstream
+    
+    # shorter commit
+    cia = commit -a
+
+    # shorter rebase --continue
+    roc = rebase --continue
+    
+    # shorter checkout upstream/master
+    cou = checkout upstream/master
+    
+    # shorter DIFFS
+    # argument #1: count of last commits to diff
+    d = !sh -c 'git diff HEAD~$1' -
+
+    # shorter delete remote and local. Force checkout of master prior to deleting
+    # argument #1: branch to delete
+    delete = "!sh -c '\
+                    git co .;\
+                    git co master;\
+                    git push origin :$0;\
+                    git branch -D $0'"
+
+    # shorter delete remote and local
+    # argument #1: branch to delete
+    delete-quick = "!sh -c '\
+                    git push origin :$0;\
+                    git branch -D $0'"
+    
+    # shorter reset --soft. Convinient to use instead of squashing commits before comitting changes into central repo
+    # takes no arguments
+    brake = !sh -c 'git reset --soft $(git rev-parse --abbrev-ref @{upstream})' -
+    
+    # Display current branch name only
+    # takes no arguments
+    cbra = "!sh -c '\
+                    branch_name=$(git symbolic-ref -q HEAD); \
+                    branch_name=${branch_name##refs/heads/}; \
+                    branch_name=${branch_name:-HEAD}; \
+                    echo $branch_name'"
+                    
+    # shorter rebase to branch from which current branch was created
+    # argument #1: (optional) add '-i' to perform interactive rebase and be able to squash commits
+    rum = !sh -c ' branch_name=$(git rev-parse --abbrev-ref @{upstream}) && git rebase $1 $branch_name' -
+    
+    # shorter push origin [!uses cbra]
+    # takes no arguments
+    por = "!sh -c '\
+                    branch_name=$(git cbra); \
+                    git push origin $branch_name:$branch_name'"
+                    
+    # shorter push --force origin [!uses cbra]
+    # takes no arguments
+    pfor = "!sh -c '\
+                    branch_name=$(git cbra); \
+                    git push --force origin $branch_name:$branch_name'"
+    
+    # shorter create new branch from upstream/master
+    # argument #1: name of branch to create
+    com = !sh -c 'git co -b $1 upstream/master' -
+
+    # attach diffs from point from which branch was created to Ccollab review
+    # Updates last commit message with review ID
+    # argument #1: review id
+    review = !sh -c 'commit_msg=$(git log -1 --format="%B") && git commit --amend -m \"$commit_msg \n[Review $1]\" && current_dir=$(git rev-parse --show-toplevel | sed \"s=.*/==g\") && branch_point=$(git rev-parse --abbrev-ref @{upstream} ) && ccollab addgitdiffs --upload-comment \"All $(git rev-list --count $branch_point...HEAD) commit(s) from $current_dir branch: $(git cbra)\n$(git diff --shortstat $branch_point..HEAD)\n$(git log -1 --format="%cD")\" $1 $(git rev-parse $branch_point) $(git rev-parse HEAD) --src-prefix=$current_dir/ --dst-prefix=$current_dir/ ' -
+
+    # attach last n commits to ccollab review
+    # Updates last commit message with review ID
+    # argument #1: review id
+    # argument #2: # of commits to attach (1 by default)
+    review-n = !sh -c 'commit_msg=$(git log -1 --format="%B") && git commit --amend -m \"$commit_msg \n[Review $1]\" && current_dir=$(git rev-parse --show-toplevel | sed \"s=.*/==g\") && branch_point=$(git rev-parse --abbrev-ref @{upstream} ) && ccollab addgitdiffs --upload-comment \"Last $(git rev-list --count HEAD~$2...HEAD) commit(s) from $current_dir branch: $(git cbra) \n$(git diff --shortstat HEAD~$2..HEAD)\n$(git log -1 --format="%cD")\" $1 $(git rev-parse HEAD~$2) $(git rev-parse HEAD) --src-prefix=$current_dir/ --dst-prefix=$current_dir/' -
+
+    # !!!!!
+    # Deletes all branches from origin, except master [!uses delete-quick]
+    # Be careful! (esp. because there is copy-paste)
+    # takes no arguments
+    clear-origin = !sh -c '(git branch -a | sed \"s= -> .*==g\" | sed \"s=remotes/origin/\\(.*\\)=\\1=g\" | sed \"s=remotes/upstream/.*==g\" | sed \"s=.*master==g\" | sed \"s=HEAD==g\" | xargs -n 1 echo \"Branch will be deleted:          \") && (git branch -a | sed \"s= -> .*==g\" | sed \"s=remotes/origin/\\(.*\\)=\\1=g\" | sed \"s=remotes/upstream/.*==g\" | sed \"s=.*master==g\" | sed \"s=HEAD==g\" | xargs -n 1 git delete-quick)' -
+    
+    
+    # Push current branch into remote to which it points to, i.e. performs 'git push upstream current-branch:master'
+    # takes no arguments
+    promo = !sh -c 'pullee_branch=$(git cbra) && remote_name=$(git rev-parse --abbrev-ref @{upstream} | sed \"s=/.*==g\") && target_branch=$(git rev-parse --abbrev-ref @{upstream} | sed \"s=.*/==g\") && git push $remote_name $pullee_branch:$target_branch' - 
+    
+    
+    ################################
+    #        Pulling requests      #
+    ################################
+    
+    # Fetch pull-request into remote 'pr'
+    # argument #1: Repo's remote name (e.g. upstream)
+    # argument #2: pull-request id (e.g. 285)
+    fetch-pr = !sh -c 'git fetch $1 refs/pull/$2/head:refs/remotes/pr/$2' -
+    
+    # Rebase given pull-request ontop of current branch [!uses cbra]
+    # argument #1: pull-request id (e.g. 285)
+    # argument #2: (optional) add '-i' to perform interactive rebase and be able to squash commits in pull-request
+    # [requires pull-request to be fetched using 'fetch-pr'.]
+    # [You shouldn't have any unstashed changes (untracked files are fine).]
+    rebase-pr = !sh -c 'pullee_branch=$(git cbra) && tmp_branch=pr_$1 && git checkout -b $tmp_branch pr/$1 && git rebase $2 $pullee_branch && git checkout $pullee_branch && git rebase $tmp_branch && git branch -D $tmp_branch' -
+    
+    # TODO: JavaDoc
+    # [!uses fetch-pr, rebase-pr]
+    # argument #1: Name of remote repo into which changes need to be pulled (e.g. upstream)
+    # argument #2: Branch into which request should be pulled (e.g. master)
+    # argument #3: pull-request id (e.g. 285)
+    # argument #4: (optional) add '-i' to perform interactive rebase and be able to squash commits in pull-request
+    pr-prepare = !sh -c 'pullee_branch=target-of-pr-$3 && git fetch $1 && git fetch-pr $1 $3 && git checkout -b $pullee_branch $1/$2 && git rebase-pr $3 $4' -
+    
+    # pushes request, previously prepared by 'pr-prepare', and deletes current branch.
+    # [!uses cbra, promo]
+    # takes no arguments
+    pr-perform = !sh -c 'pullee_branch=$(git cbra) && git promo && git checkout master && git branch -D $pullee_branch' - 
+    
+    # Pull a request. Does fetch, creates temp branch from PR's target, rebases commits (allowing to squash them), pushes changes and cleans up.
+    # [!uses fetch-pr, rebase-pr, cbra]
+    # argument #1: Name of remote repo into which changes need to be pulled (e.g. upstream)
+    # argument #2: Branch into which request should be pulled (e.g. master)
+    # argument #3: pull-request id (e.g. 285)
+    # argument #4: (optional) add '-i' to perform interactive rebase and be able to squash commits in pull-request
+    # [You shouldn't have any unstashed changes (untracked files are fine).]
+    # [If any step fails - all operations will be aborted (you will have to manualy delete temp branches if any).]
+    # [If pull succeedes - you will be on 'master' branch of local repo.]
+    pull-pr = !sh -c 'git pr-prepare $1 $2 $3 $4 && git pr-perform' -
