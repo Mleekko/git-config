@@ -63,8 +63,15 @@
     delete-quick = "!sh -c '\
                     git push origin :$0;\
                     git branch -D $0'"
+                    
+    # deletes branches that were merged into 'upstream/master', except master branch
+    clean-old = "!sh -c '\
+                    git co develop;\
+                    git branch --merged origin/develop | grep -v develop | xargs git branch -d'"
+    #                git branch --merged upstream/master | grep -v master | xargs git branch -d'"
+
     
-    # shorter reset --soft. Convinient to use instead of squashing commits before comitting changes into central repo
+    # shorter reset --soft. Convenient to use instead of squashing commits before comitting changes into central repo
     # takes no arguments
     brake = !sh -c 'git reset --soft $(git rev-parse --abbrev-ref @{upstream})' -
     
@@ -91,6 +98,12 @@
     pfor = "!sh -c '\
                     branch_name=$(git cbra); \
                     git push --force origin $branch_name:$branch_name'"
+                    
+    # Pushes to 'build' branch in origin [!uses cbra]
+    # takes no arguments
+    build = "!sh -c '\
+                    branch_name=$(git cbra); \
+                    git push --force origin $branch_name:build'"
     
     # shorter create new branch from upstream/master
     # argument #1: name of branch to create
@@ -118,6 +131,11 @@
     # takes no arguments
     promo = !sh -c 'pullee_branch=$(git cbra) && remote_name=$(git rev-parse --abbrev-ref @{upstream} | sed \"s=/.*==g\") && target_branch=$(git rev-parse --abbrev-ref @{upstream} | sed \"s=.*/==g\") && git push $remote_name $pullee_branch:$target_branch' - 
     
+    # save a stash, run a command and then pop the stash
+    # arguments - command to run
+    # e.g. git trav com BRANCH
+    trav = !sh -c 'git stash save && git $1 $2 $3 $4   && git stash pop' - 
+
     
     ################################
     #        Pulling requests      #
